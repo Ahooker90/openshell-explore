@@ -18,6 +18,36 @@ for inference** (swap the agent's API key for a managed one). The default is **d
 an agent can run freely inside the box but can't touch the network or your files unless a policy you
 wrote says so.
 
+```mermaid
+flowchart TB
+    user(["You — openshell CLI"])
+
+    subgraph host["Host machine"]
+        subgraph gw["Gateway · control plane"]
+            driver["Compute driver<br/>Podman · Docker · VM · K8s"]
+            policy{"Policy engine<br/>default-deny egress"}
+            router["Inference router<br/>inference.local"]
+        end
+        subgraph sbox["Sandbox · isolated container"]
+            agent["Your agent / process"]
+        end
+    end
+
+    net(["Public internet"])
+    backend[("Model backend<br/>local Ollama · corporate endpoint")]
+
+    user -->|"create & manage"| gw
+    driver -->|"launches & supervises"| sbox
+    agent ==>|"every outbound connection"| policy
+    policy -->|"allow"| net
+    policy -->|"deny — blocked + OCSF log"| stop["✗"]
+    policy -->|"route for inference<br/>strip caller key, inject managed key"| router
+    router -->|"forward to backend"| backend
+```
+
+*Lessons 01–02 walk through the **allow** / **deny** paths and how to write the policy; lesson 03
+exercises the **route-for-inference** path with a local model.*
+
 ## Start here
 
 👉 **[`lessons/README.md`](lessons/README.md)** — the numbered path. Do the steps in order:
@@ -42,7 +72,6 @@ wrote says so.
 | [`lessons/`](lessons/) | The numbered lesson set (start at its `README.md`). OS-specific setup lives in `macos/`, `linux/`, `windows/`. |
 | [`example-agent/`](example-agent/) | A tiny, dependency-free agent + scripts that exercise the whole stack (sandbox + policy + provider + inference). Ollama locally; corporate-ready. |
 | [`corporate-gateway-setup.md`](corporate-gateway-setup.md) | Standalone guide for an air-gapped corporate gateway (Podman, internal OpenAI-compatible endpoint, public LLM APIs hard-blocked). |
-| [`CLAUDE.md`](CLAUDE.md) | Orientation notes for AI coding assistants working in this workspace. |
 
 > The upstream OpenShell **source tree is intentionally not included** here — the lessons install the
 > `openshell` CLI with `uv` and pull the gateway image with Podman, so there's nothing to vendor.
