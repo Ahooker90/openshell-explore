@@ -1,0 +1,21 @@
+# Tightest useful sandbox policy: NO general network egress at all.
+#
+# The agent still reaches the model because `https://inference.local` is EXEMPT
+# from network policy — it's handled by OpenShell's inference router, not the
+# egress proxy. That's the security story in one file: the agent can talk to the
+# model and nothing else.
+#
+# Note: agent.py is dependency-free, so this works as-is. If you switch to an
+# agent that needs `pip install` at runtime, you'd also have to allow PyPI here
+# (see ../OpenShell/examples/local-inference/sandbox-policy.yaml for that pattern).
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /proc, /dev/urandom, /app, /etc, /var/log]
+  read_write: [/sandbox, /tmp, /dev/null]
+landlock:
+  compatibility: best_effort
+process:
+  run_as_user: sandbox
+  run_as_group: sandbox
+network_policies: {}

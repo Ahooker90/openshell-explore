@@ -1,0 +1,28 @@
+# Allow curl to make read-only (GET/HEAD/OPTIONS) calls to the GitHub REST API.
+# POST/PUT/PATCH/DELETE are blocked by the "read-only" access preset at L7.
+version: 1
+
+# Static filesystem + process settings. `openshell policy set` replaces the
+# ENTIRE policy, so these defaults must be present even when you only care
+# about the network rules.
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /proc, /dev/urandom, /app, /etc, /var/log]
+  read_write: [/sandbox, /tmp, /dev/null]
+landlock:
+  compatibility: best_effort
+process:
+  run_as_user: sandbox
+  run_as_group: sandbox
+
+network_policies:
+  github_api:
+    name: github-api-readonly
+    endpoints:
+      - host: api.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - { path: /usr/bin/curl }
